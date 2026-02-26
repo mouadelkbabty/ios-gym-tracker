@@ -1,4 +1,4 @@
-name: Build & Test GymTracker
+name: Build GymTracker
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build GymTracker (iOS Simulator)
+    name: Build for iOS Simulator
     runs-on: macos-15
 
     steps:
@@ -19,25 +19,26 @@ jobs:
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | grep -iv beta | sort -V | tail -1)"
           xcodebuild -version
-          xcrun simctl list runtimes
-          xcrun simctl list devices available | grep -i iphone | head -15
+
+      - name: Show available simulators
+        run: xcrun simctl list devices available | grep -i iphone | head -20
 
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Prepare Sources
+      - name: Prepare Sources folder
         run: |
           mkdir -p Sources/Models Sources/Views
           find . -maxdepth 1 -name '*.swift' -exec cp {} Sources/ \;
           cp Models/*.swift Sources/Models/ 2>/dev/null || true
           cp Views/*.swift  Sources/Views/  2>/dev/null || true
-          echo "--- Sources ---"
+          echo "Files in Sources/:"
           find Sources -name '*.swift'
 
-      - name: Generate Xcode Project
+      - name: Generate .xcodeproj
         run: xcodegen generate --spec project.yml
 
-      - name: Build for Simulator
+      - name: Build
         run: |
           set -o pipefail
           xcodebuild \
@@ -51,33 +52,30 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             | xcpretty --color
 
-      - name: Take Simulator Screenshot
+      - name: Screenshot (if simulator available)
         continue-on-error: true
         run: |
-          UDID=$(xcrun simctl list devices available -j | python3 scripts/find_simulator.py) || true
+          UDID=$(xcrun simctl list devices available -j | python3 scripts/find_simulator.py)
           if [ -z "$UDID" ]; then
-            echo "No iPhone simulator available - skipping screenshot"
+            echo "No simulator found, skipping screenshot."
             exit 0
           fi
-          echo "Booting simulator $UDID"
           xcrun simctl boot "$UDID" 2>/dev/null || true
           sleep 8
           APP=$(find ~/Library/Developer/Xcode/DerivedData -name 'GymTracker.app' -path '*/Debug-iphonesimulator/*' | head -1)
           if [ -z "$APP" ]; then
-            echo "Built .app not found - skipping screenshot"
+            echo "App binary not found, skipping screenshot."
             exit 0
           fi
           xcrun simctl install "$UDID" "$APP"
           xcrun simctl launch  "$UDID" com.gymtracker.app
           sleep 6
           xcrun simctl io "$UDID" screenshot simulator_screenshot.png
-          echo "Screenshot captured"
 
-      - name: Upload Screenshot
+      - name: Upload screenshot artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: simulator-screenshot
           path: simulator_screenshot.png
-          if-no-files-found: ignore
           if-no-files-found: ignore
