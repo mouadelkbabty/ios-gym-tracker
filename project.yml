@@ -11,13 +11,9 @@ targets:
     platform: iOS
     deploymentTarget: "16.0"
     sources:
-      - path: .
+      - path: Sources
         excludes:
           - "**/.DS_Store"
-          - ".github/**"
-          - "project.yml"
-          - "README.md"
-          - ".gitignore"
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gymtracker.app
       SWIFT_VERSION: "5.9"

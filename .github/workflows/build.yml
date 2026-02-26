@@ -22,6 +22,15 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Organise sources into Sources/ subfolder
+        run: |
+          mkdir -p Sources/Models Sources/Views
+          # Copy top-level Swift files
+          find . -maxdepth 1 -name "*.swift" -exec cp {} Sources/ \;
+          # Copy Models and Views subdirectories
+          cp Models/*.swift Sources/Models/ 2>/dev/null || true
+          cp Views/*.swift  Sources/Views/  2>/dev/null || true
+
       - name: Generate Xcode Project
         run: xcodegen generate --spec project.yml
 
