@@ -1,0 +1,24 @@
+name: GymTracker
+options:
+  bundleIdPrefix: com.gymtracker
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.2"
+
+targets:
+  GymTracker:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: GymTracker
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gymtracker.app
+      SWIFT_VERSION: "5.9"
+      TARGETED_DEVICE_FAMILY: "1"
+      MARKETING_VERSION: "1.0"
+      CURRENT_PROJECT_VERSION: "1"
+      DEVELOPMENT_TEAM: ""
+      CODE_SIGN_STYLE: Manual
