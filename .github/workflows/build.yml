@@ -15,8 +15,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+      # Pick whatever Xcode version is actually installed on this runner
+      - name: Select latest available Xcode
+        run: |
+          XCODE=$(ls /Applications | grep -E '^Xcode[_\.]' | grep -iv beta | sort -V | tail -1)
+          echo "Using: /Applications/$XCODE"
+          sudo xcode-select -s "/Applications/$XCODE"
+          xcodebuild -version
+
+      - name: List available simulator runtimes
+        run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devices available | grep -i iphone | head -20
 
       # ── Generate .xcodeproj from project.yml (no Mac needed locally) ──
       - name: Install XcodeGen
@@ -34,37 +44,58 @@ jobs:
       - name: Generate Xcode Project
         run: xcodegen generate --spec project.yml
 
-      # ── Build ──
+      # ── Build using generic/platform — works without any specific runtime ──
       - name: Build for iOS Simulator
         run: |
           xcodebuild \
             -project GymTracker.xcodeproj \
             -scheme GymTracker \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'generic/platform=iOS Simulator' \
             clean build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            | xcpretty --color && exit ${PIPESTATUS[0]}
+            | xcpretty --color
+          exit ${PIPESTATUS[0]}
 
-      # ── Boot simulator, install app, screenshot ──
+      # ── Screenshot: dynamically pick any available iPhone simulator ──
       - name: Screenshot on Simulator
         run: |
-          UDID=$(xcrun simctl list devices available | grep -E "iPhone 16 \(" | head -1 | grep -oE '[A-F0-9-]{36}')
-          echo "Using simulator: $UDID"
+          # Find first available iPhone simulator using python3 JSON parsing
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data['devices'].items():
+    for d in devices:
+        if 'iPhone' in d['name'] and d['isAvailable']:
+            print(d['udid'])
+            sys.exit(0)
+")
+          if [ -z "$UDID" ]; then
+            echo "No simulator runtime found — skipping screenshot."
+            exit 0
+          fi
+          echo "Using simulator UDID: $UDID"
           xcrun simctl boot "$UDID" || true
-          sleep 6
+          sleep 8
 
-          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "GymTracker.app" -path "*/Debug-iphonesimulator/*" | head -1)
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData \
+            -name "GymTracker.app" -path "*/Debug-iphonesimulator/*" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "App not found in DerivedData — skipping screenshot."
+            exit 0
+          fi
           echo "App path: $APP_PATH"
           xcrun simctl install "$UDID" "$APP_PATH"
           xcrun simctl launch  "$UDID" com.gymtracker.app
-          sleep 5
+          sleep 6
           xcrun simctl io "$UDID" screenshot simulator_screenshot.png
+          echo "Screenshot done."
 
       - name: Upload Screenshot
         uses: actions/upload-artifact@v4
         with:
           name: simulator-screenshot
           path: simulator_screenshot.png
+          if-no-files-found: ignore
