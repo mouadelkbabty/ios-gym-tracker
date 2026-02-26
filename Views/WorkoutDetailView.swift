@@ -74,7 +74,7 @@ struct WorkoutDetailView: View {
         HStack(spacing: 14) {
             statCard(title: "Sets",   value: "\(live.sets)",                            icon: "arrow.clockwise",   color: .blue)
             statCard(title: "Reps",   value: "\(live.reps)",                            icon: "repeat",            color: .green)
-            statCard(title: "Weight", value: "\(live.weight, specifier: "%.1f") kg",   icon: "scalemass.fill",    color: .orange)
+            statCard(title: "Weight", value: "\(String(format: "%.1f", live.weight)) kg", icon: "scalemass.fill", color: .orange)
         }
     }
 
@@ -84,7 +84,7 @@ struct WorkoutDetailView: View {
             Label("Total Volume", systemImage: "bolt.fill")
                 .font(.headline)
                 .foregroundColor(.purple)
-            Text("\(vol, specifier: "%.0f") kg")
+            Text("\(String(format: "%.0f", vol)) kg")
                 .font(.system(size: 40, weight: .bold, design: .rounded))
                 .foregroundColor(.purple)
             Text("Sets × Reps × Weight")

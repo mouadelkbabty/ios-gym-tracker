@@ -115,7 +115,7 @@ struct WorkoutRowView: View {
                             .foregroundColor(.yellow)
                     }
                 }
-                Text("\(workout.sets) sets × \(workout.reps) reps @ \(workout.weight, specifier: "%.1f") kg")
+                Text("\(workout.sets) sets × \(workout.reps) reps @ \(String(format: "%.1f", workout.weight)) kg")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
